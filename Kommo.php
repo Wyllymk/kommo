@@ -2,75 +2,140 @@
 /**
  * Plugin Name:     Kommo
  * Plugin URI:      https://github.com/WyllyMk/Kommo
- * Description:     Integrate your WordPress site with Kommo CRM to manage leads, contacts, and deals seamlessly. Sync data and automate your sales workflow.
+ * Description:     Integrate your WordPress site with Kommo CRM
  * Author:          WyllyMk
  * Author URI:      https://wilsondevops.com/
- * Text Domain:     Kommo
+ * Text Domain:     kommo
  * Domain Path:     /languages
  * Version:         0.1.0
+ * Requires PHP:    7.4
+ * License:         GPL v2 or later
+ * License URI:     https://www.gnu.org/licenses/gpl-2.0.html
+ * Update URI:      https://github.com/WyllyMk/Kommo
  *
  * @package         Kommo
  */
 
-// Prevent direct access to this file
+// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Define plugin constants
+// Prevent duplicate plugin loading
+if (defined('KOMMO_VERSION')) {
+    return;
+}
+
+// Define plugin constants with unique names
 define('KOMMO_VERSION', '0.1.0');
 define('KOMMO_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('KOMMO_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('KOMMO_PLUGIN_BASENAME', plugin_basename(__FILE__));
+define('KOMMO_MINIMUM_PHP_VERSION', '7.4');
+define('KOMMO_MINIMUM_WP_VERSION', '5.0');
 
-// Load required files
-require_once KOMMO_PLUGIN_DIR . 'includes/class-kommo.php';
-require_once KOMMO_PLUGIN_DIR . 'includes/class-kommo-api.php';
-
-/**
- * Initialize the plugin
- */
-function kommo_init() {
-    // Initialize main plugin class
-    $kommo = new Kommo();
-    $kommo->init();
+// Check PHP Version
+if (version_compare(PHP_VERSION, KOMMO_MINIMUM_PHP_VERSION, '<')) {
+    add_action('admin_notices', function() {
+        $message = sprintf(
+            /* translators: %s: PHP version */
+            esc_html__('Kommo requires PHP version %s or higher.', 'kommo'),
+            KOMMO_MINIMUM_PHP_VERSION
+        );
+        printf('<div class="notice notice-error"><p>%s</p></div>', $message);
+    });
+    return;
 }
-add_action('plugins_loaded', 'kommo_init');
 
-/**
- * Activation hook
- */
-function kommo_activate() {
-    // Add database table creation
-    global $wpdb;
-    
-    $charset_collate = $wpdb->get_charset_collate();
-    
-    // Create logs table
-    $table_name = $wpdb->prefix . 'kommo_logs';
-    $sql = "CREATE TABLE IF NOT EXISTS $table_name (
-        id bigint(20) NOT NULL AUTO_INCREMENT,
-        event_type varchar(50) NOT NULL,
-        message text NOT NULL,
-        created_at datetime DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY  (id)
-    ) $charset_collate;";
-
-    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-    dbDelta($sql);
-
-    // Set default options
-    add_option('kommo_api_key', '');
-    add_option('kommo_account_domain', '');
-
-    flush_rewrite_rules();
+// Check WordPress Version
+if (version_compare($GLOBALS['wp_version'], KOMMO_MINIMUM_WP_VERSION, '<')) {
+    add_action('admin_notices', function() {
+        $message = sprintf(
+            /* translators: %s: WordPress version */
+            esc_html__('Kommo requires WordPress version %s or higher.', 'kommo'),
+            KOMMO_MINIMUM_WP_VERSION
+        );
+        printf('<div class="notice notice-error"><p>%s</p></div>', $message);
+    });
+    return;
 }
-register_activation_hook(__FILE__, 'kommo_activate');
 
-/**
- * Deactivation hook
- */
-function kommo_deactivate() {
-    // Clean up plugin data if necessary
-    flush_rewrite_rules();
+// Check if another plugin with the same namespace exists
+if (class_exists('WyllyMk\KommoCRM\\Plugin')) {
+    add_action('admin_notices', function() {
+        $message = __('Another plugin is using the Kommo namespace. Please deactivate it before activating this plugin.', 'kommo');
+        printf('<div class="notice notice-error"><p>%s</p></div>', esc_html($message));
+    });
+    return;
 }
-register_deactivation_hook(__FILE__, 'kommo_deactivate');
+
+// Composer autoloader with error handling
+if (file_exists(KOMMO_PLUGIN_DIR . 'vendor/autoload.php')) {
+    require_once KOMMO_PLUGIN_DIR . 'vendor/autoload.php';
+} else {
+    add_action('admin_notices', function() {
+        $message = __('Kommo plugin requires Composer dependencies to be installed. Please run composer install in the plugin directory.', 'kommo');
+        printf('<div class="notice notice-error"><p>%s</p></div>', esc_html($message));
+    });
+    return;
+}
+
+// Initialize the plugin with error handling
+add_action('plugins_loaded', function() {
+    try {
+        if (!class_exists('WyllyMk\KommoCRM\\Plugin')) {
+            throw new \Exception('Plugin class not found. Please check autoloader configuration.');
+        }
+
+        // Check for required PHP extensions
+        $required_extensions = ['json', 'curl'];
+        foreach ($required_extensions as $ext) {
+            if (!extension_loaded($ext)) {
+                throw new \Exception(sprintf('Required PHP extension %s is missing.', $ext));
+            }
+        }
+
+        $plugin = \WyllyMk\KommoCRM\Plugin::getInstance();
+        $plugin->init();
+
+    } catch (\Exception $e) {
+        add_action('admin_notices', function() use ($e) {
+            printf(
+                '<div class="notice notice-error"><p>%s</p></div>',
+                esc_html($e->getMessage())
+            );
+        });
+        
+        // Log error if possible
+        if (class_exists('WyllyMk\KommoCRM\\Logger')) {
+            $logger = \WyllyMk\KommoCRM\Logger::getInstance();
+            $logger->log('error', $e->getMessage());
+        }
+
+        // Deactivate plugin on critical errors
+        require_once(ABSPATH . 'wp-admin/includes/plugin.php');
+        deactivate_plugins(KOMMO_PLUGIN_BASENAME);
+    }
+});
+
+// Register activation hook with error handling
+register_activation_hook(__FILE__, function() {
+    try {
+        \WyllyMk\KommoCRM\Plugin::activate();
+    } catch (\Exception $e) {
+        wp_die(
+            esc_html($e->getMessage()),
+            'Plugin Activation Error',
+            ['back_link' => true]
+        );
+    }
+});
+
+// Register deactivation hook with error handling
+register_deactivation_hook(__FILE__, function() {
+    try {
+        \WyllyMk\KommoCRM\Plugin::deactivate();
+    } catch (\Exception $e) {
+        error_log('Kommo deactivation error: ' . $e->getMessage());
+    }
+});

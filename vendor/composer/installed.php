@@ -3,7 +3,7 @@
         'name' => 'wylly/kommo',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '5888457d0eb9cac2a95b4400f2d93176df9445ea',
+        'reference' => 'b45c74f4a084c911546be3a40c45f51e77c7804c',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -325,7 +325,7 @@
         'wylly/kommo' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '5888457d0eb9cac2a95b4400f2d93176df9445ea',
+            'reference' => 'b45c74f4a084c911546be3a40c45f51e77c7804c',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

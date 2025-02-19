@@ -14,14 +14,16 @@
     "php": ">=7.4"
   },
   "autoload": {
-    "psr-4": {
-      "Kommo\\": "includes/"
-    }
+    "classmap": [
+      "includes/",
+      "admin/",
+      "src/"
+    ]
   },
   "autoload-dev": {
-    "psr-4": {
-      "Kommo\\Tests\\": "tests/"
-    }
+    "classmap": [
+      "tests/"
+    ]
   },
   "scripts": {
     "test": "phpunit",

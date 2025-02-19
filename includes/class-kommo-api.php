@@ -1,6 +1,6 @@
 <?php
 
-namespace Kommo;
+namespace WyllyMk\KommoCRM;
 
 if (!defined('ABSPATH')) {
     exit;
