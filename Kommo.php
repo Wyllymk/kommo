@@ -74,19 +74,3 @@ function kommo_deactivate() {
     flush_rewrite_rules();
 }
 register_deactivation_hook(__FILE__, 'kommo_deactivate');
-
-/**
- * Uninstall hook
- */
-function kommo_uninstall() {
-    global $wpdb;
-    
-    // Remove options
-    delete_option('kommo_api_key');
-    delete_option('kommo_account_domain');
-    delete_option('kommo_settings');
-    
-    // Remove tables
-    $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}kommo_logs");
-}
-register_uninstall_hook(__FILE__, 'kommo_uninstall');
