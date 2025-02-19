@@ -78,15 +78,15 @@ class Plugin {
 
         $config = array(
             'slug' => KOMMO_PLUGIN_BASENAME,
-            'proper_folder_name' => 'Kommo',
-            'api_url' => 'https://api.github.com/repos/WyllyMk/Kommo',
-            'raw_url' => 'https://raw.github.com/WyllyMk/Kommo/main',
-            'github_url' => 'https://github.com/WyllyMk/Kommo',
-            'zip_url' => 'https://github.com/WyllyMk/Kommo/archive/main.zip',
+            'proper_folder_name' => 'kommo',
+            'api_url' => 'https://api.github.com/repos/WyllyMk/kommo',
+            'raw_url' => 'https://raw.github.com/WyllyMk/kommo/main',
+            'github_url' => 'https://github.com/WyllyMk/kommo',
+            'zip_url' => 'https://github.com/WyllyMk/kommo/archive/main.zip',
             'sslverify' => true,
             'requires' => '5.0',
             'tested' => '6.4',
-            'readme' => 'README.md',
+            'readme' => 'README.txt',
             'access_token' => '', // Add your GitHub access token here if needed
         );
 

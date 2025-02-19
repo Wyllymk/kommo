@@ -1,17 +1,17 @@
 <?php
 /**
- * Plugin Name:     Kommo
- * Plugin URI:      https://github.com/WyllyMk/Kommo
+ * Plugin Name:     Kommo CRM
+ * Plugin URI:      https://github.com/WyllyMk/kommo
  * Description:     Integrate your WordPress site with Kommo CRM
  * Author:          WyllyMk
  * Author URI:      https://wilsondevops.com/
  * Text Domain:     kommo
  * Domain Path:     /languages
- * Version:         0.1.0
+ * Version:         1.0.0
  * Requires PHP:    7.4
  * License:         GPL v2 or later
  * License URI:     https://www.gnu.org/licenses/gpl-2.0.html
- * Update URI:      https://github.com/WyllyMk/Kommo
+ * Update URI:      https://github.com/WyllyMk/kommo
  *
  * @package         Kommo
  */
@@ -27,7 +27,7 @@ if (defined('KOMMO_VERSION')) {
 }
 
 // Define plugin constants with unique names
-define('KOMMO_VERSION', '0.1.0');
+define('KOMMO_VERSION', '1.0.0');
 define('KOMMO_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('KOMMO_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('KOMMO_PLUGIN_BASENAME', plugin_basename(__FILE__));

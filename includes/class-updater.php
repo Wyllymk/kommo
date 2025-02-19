@@ -79,17 +79,17 @@ class Updater {
 	public function __construct( $config = array() ) {
 
 		$defaults = array(
-            'slug' => plugin_basename(__FILE__),
-            'proper_folder_name' => dirname(plugin_basename(__FILE__)),
-            'api_url' => 'https://api.github.com/repos/owner/repo',
-            'raw_url' => 'https://raw.githubusercontent.com/owner/repo/main',
-            'github_url' => 'https://github.com/owner/repo',
-            'zip_url' => 'https://github.com/owner/repo/archive/main.zip',
+			'slug' => KOMMO_PLUGIN_BASENAME,
+            'proper_folder_name' => 'kommo',
+            'api_url' => 'https://api.github.com/repos/WyllyMk/kommo',
+            'raw_url' => 'https://raw.github.com/WyllyMk/kommo/main',
+            'github_url' => 'https://github.com/WyllyMk/kommo',
+            'zip_url' => 'https://github.com/WyllyMk/kommo/archive/main.zip',
             'sslverify' => true,
             'requires' => '5.0',
             'tested' => '6.4',
-            'readme' => 'README.md',
-            'access_token' => '',
+            'readme' => 'README.txt',
+            'access_token' => '', // Add your GitHub access token here if needed
 		);
 
 		$this->config = wp_parse_args( $config, $defaults );
