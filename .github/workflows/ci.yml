@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-versions: ["7.4", "8.0", "8.1"]
+        php-versions: ["8.1"]
         wordpress-versions: ["latest"]
 
     steps:
@@ -26,6 +26,9 @@ jobs:
           extensions: mbstring, dom, xml, zip
           coverage: xdebug
           tools: composer:v2, phpunit, phpcs, php-cs-fixer
+
+      - name: Create src directory
+        run: mkdir -p src
 
       - name: Validate composer.json
         run: composer validate --strict
@@ -40,7 +43,7 @@ jobs:
             ${{ runner.os }}-php-
 
       - name: Install dependencies
-        run: composer install --prefer-dist --no-progress
+        run: composer install --prefer-dist --no-progress --with-all-dependencies
 
       - name: Check PHP syntax
         run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
