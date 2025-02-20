@@ -6,11 +6,40 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Main Plugin Class
+ * 
+ * Handles the initialization and core functionality of the plugin
+ * 
+ * @package WyllyMk\KommoCRM
+ * @since 1.0.0
+ */
 class Plugin {
+    /**
+     * @var Plugin|null Singleton instance
+     */
     private static $instance = null;
-    private $updater;
-    private $logger;
 
+    /**
+     * @var Updater Instance of the GitHub updater
+     */
+    private $updater;
+
+    /**
+     * @var OrderTracker Instance of the order tracking system
+     */
+    private $order_tracker;
+
+    /**
+     * @var Admin Instance of the admin interface handler
+     */
+    private $admin;
+
+    /**
+     * Get singleton instance of the plugin
+     * 
+     * @return Plugin
+     */
     public static function getInstance() {
         if (null === self::$instance) {
             self::$instance = new self();
@@ -18,60 +47,66 @@ class Plugin {
         return self::$instance;
     }
 
+    /**
+     * Initialize the plugin
+     * 
+     * Sets up all necessary hooks and initializes components
+     * 
+     * @return void
+     */
     public function init() {
-        // Initialize logger
-        $this->logger = Logger::getInstance();
+        // Initialize OrderTracker first as other components depend on it
+        $this->order_tracker = OrderTracker::getInstance();
 
-        // Initialize updater
+        // Initialize Admin interface
+        $this->init_admin();
+
+        // Initialize GitHub updater
         add_action('init', [$this, 'init_github_updater']);
 
-        // Initialize admin menu
-        add_action('admin_menu', [$this, 'addAdminMenu']);
-        add_action('admin_init', [$this, 'registerSettings']);
+        // Register WooCommerce hooks
+        $this->register_woocommerce_hooks();        
+    }    
 
-        // Add settings link to plugins page
-        add_filter('plugin_action_links_' . KOMMO_PLUGIN_BASENAME, [$this, 'addSettingsLink']);
-
-        // Schedule log cleanup
-        if (!wp_next_scheduled('kommo_cleanup_logs')) {
-            wp_schedule_event(time(), 'daily', 'kommo_cleanup_logs');
+    /**
+     * Initialize the admin interface
+     * 
+     * @return void
+     */
+    private function init_admin() {
+        if (is_admin()) {
+            $this->admin = new Admin($this->order_tracker);
+            $this->admin->init();
         }
-        add_action('kommo_cleanup_logs', [$this, 'cleanup_old_logs']);
     }
 
     /**
-     * Add settings link to plugin listing
-     *
-     * @param array $links Existing plugin action links
-     * @return array Modified plugin action links
+     * Register WooCommerce related hooks
+     * 
+     * @return void
      */
-    public function addSettingsLink($links) {
-        $settings_link = sprintf(
-            '<a href="%s">%s</a>',
-            admin_url('admin.php?page=kommo-settings'),
-            __('Settings', 'kommo')
-        );
-        array_unshift($links, $settings_link);
-        return $links;
-    }
+    private function register_woocommerce_hooks() {
+        // Track new orders
+        add_action('woocommerce_checkout_order_processed', function($order_id) {
+            $this->order_tracker->track_order($order_id);
+        });
 
-    public function log_settings_update($old_value) {
-        $this->logger->log('settings_update', 'Plugin settings were updated');
-    }
-
-    public function cleanup_old_logs() {
-        $this->logger->clear_old_logs(30); // Keep 30 days of logs
+        // Track order status changes
+        add_action('woocommerce_order_status_changed', function($order_id) {
+            $this->order_tracker->track_order($order_id);
+        }, 10, 1);
     }
 
     /**
      * Initialize the GitHub updater
+     * 
+     * @return void
      */
     public function init_github_updater() {
         if (!is_admin()) {
             return;
         }
 
-        // Define update constant (optional)
         if (!defined('WP_GITHUB_FORCE_UPDATE')) {
             define('WP_GITHUB_FORCE_UPDATE', true);
         }
@@ -87,79 +122,74 @@ class Plugin {
             'requires' => '5.0',
             'tested' => '6.4',
             'readme' => 'README.txt',
-            'access_token' => '', // Add your GitHub access token here if needed
+            'access_token' => '',
         );
 
         try {
             $this->updater = new Updater($config);
-            
-            // Log successful updater initialization
-            $this->logger->log('updater', 'GitHub updater initialized successfully');
         } catch (\Exception $e) {
-            // Log error if updater fails to initialize
-            $this->logger->log('error', 'Failed to initialize GitHub updater: ' . $e->getMessage());
+            // Log error silently
+            error_log('Kommo updater initialization failed: ' . $e->getMessage());
         }
     }    
 
-    public function addAdminMenu() {
-        add_menu_page(
-            __('Kommo CRM', 'kommo'),
-            __('Kommo CRM', 'kommo'),
-            'manage_options',
-            'kommo-settings',
-            [$this, 'renderSettingsPage'],
-            'dashicons-businessman'
-        );
-    }
 
-    public function registerSettings() {
-        register_setting('kommo_settings', 'kommo_api_key');
-        register_setting('kommo_settings', 'kommo_account_domain');
-    }
-
-    public function renderSettingsPage() {
-        if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to access this page.', 'kommo'));
-        }
-
-        require_once KOMMO_PLUGIN_DIR . 'admin/views/admin-page.php';
-    }
-
+    /**
+     * Plugin activation hook callback
+     * 
+     * Creates necessary database tables and sets default options
+     * 
+     * @return void
+     */
     public static function activate() {
         global $wpdb;
         
+        $table_name = $wpdb->prefix . 'kommo_order_tracking';
         $charset_collate = $wpdb->get_charset_collate();
-        
-        // Create logs table
-        $table_name = $wpdb->prefix . 'kommo_logs';
+    
         $sql = "CREATE TABLE IF NOT EXISTS $table_name (
             id bigint(20) NOT NULL AUTO_INCREMENT,
-            event_type varchar(50) NOT NULL,
-            message text NOT NULL,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY  (id)
+            order_id bigint(20) NOT NULL,
+            customer_id bigint(20) NOT NULL,
+            customer_email varchar(100) NOT NULL,
+            customer_name varchar(100) NOT NULL,
+            order_total decimal(10,2) NOT NULL,
+            payment_method varchar(100) NOT NULL,
+            order_status varchar(50) NOT NULL,
+            created_at datetime NOT NULL,
+            products longtext NOT NULL,
+            coupons longtext,
+            billing_address longtext NOT NULL,
+            shipping_address longtext NOT NULL,
+            PRIMARY KEY  (id),
+            KEY order_id (order_id),
+            KEY customer_id (customer_id)
         ) $charset_collate;";
-
+    
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
 
         // Set default options
         add_option('kommo_api_key', '');
         add_option('kommo_account_domain', '');
+        add_option('kommo_api_endpoint', '');
 
-        // Log activation
-        $logger = Logger::getInstance();
-        $logger->log('activation', 'Plugin activated');
+        // Clear any existing rewrite rules
+        flush_rewrite_rules();
     }
 
+    /**
+     * Plugin deactivation hook callback
+     * 
+     * Cleans up scheduled events and logs
+     * 
+     * @return void
+     */
     public static function deactivate() {
         // Remove scheduled events
         wp_clear_scheduled_hook('kommo_cleanup_logs');
 
-        // Log deactivation
-        $logger = Logger::getInstance();
-        $logger->log('deactivation', 'Plugin deactivated');
-
+        // Clear rewrite rules
         flush_rewrite_rules();
     }
 }

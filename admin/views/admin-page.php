@@ -13,10 +13,6 @@ if (isset($_GET['settings-updated'])) {
     );
 }
 
-// Get logs from database
-global $wpdb;
-$table_name = $wpdb->prefix . 'kommo_logs';
-$logs = $wpdb->get_results("SELECT * FROM {$table_name} ORDER BY created_at DESC LIMIT 100");
 ?>
 
 <div class="wrap">
@@ -44,6 +40,7 @@ $logs = $wpdb->get_results("SELECT * FROM {$table_name} ORDER BY created_at DESC
                         <input type="text" id="kommo_api_key" name="kommo_api_key"
                             value="<?php echo esc_attr(get_option('kommo_api_key')); ?>" class="regular-text">
                     </td>
+
                 </tr>
                 <tr>
                     <th scope="row">
@@ -58,51 +55,47 @@ $logs = $wpdb->get_results("SELECT * FROM {$table_name} ORDER BY created_at DESC
             <?php submit_button(); ?>
         </form>
     </div>
+    <div class="wrap">
+        <h1><?php _e('Order Tracking', 'kommo'); ?></h1>
 
-    <!-- Logs Table -->
-    <div class="card" style="margin-top: 20px;">
-        <h2><?php _e('Recent Logs', 'kommo'); ?></h2>
-        <?php if ($logs && !empty($logs)) : ?>
         <table class="wp-list-table widefat fixed striped">
             <thead>
                 <tr>
-                    <th><?php _e('ID', 'kommo'); ?></th>
-                    <th><?php _e('Event Type', 'kommo'); ?></th>
-                    <th><?php _e('Message', 'kommo'); ?></th>
-                    <th><?php _e('Date', 'kommo'); ?></th>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Total</th>
+                    <th>Payment Method</th>
+                    <th>Status</th>
+                    <th>Date</th>
+
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($logs as $log) : ?>
+                <?php foreach ($orders as $order): ?>
                 <tr>
-                    <td><?php echo esc_html($log->id); ?></td>
-                    <td><?php echo esc_html($log->event_type); ?></td>
-                    <td><?php echo esc_html($log->message); ?></td>
-                    <td><?php echo esc_html(wp_date(get_option('date_format') . ' ' . get_option('time_format'), strtotime($log->created_at))); ?>
-                    </td>
+                    <td>#<?php echo esc_html($order->order_id); ?></td>
+                    <td><?php echo esc_html($order->customer_name); ?><br>
+                        <?php echo esc_html($order->customer_email); ?></td>
+                    <td><?php echo wc_price($order->order_total); ?></td>
+                    <td><?php echo esc_html($order->payment_method); ?></td>
+                    <td><?php echo esc_html($order->order_status); ?></td>
+                    <td><?php echo esc_html($order->created_at); ?></td>
+
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
-        <?php else : ?>
-        <p><?php _e('No logs found.', 'kommo'); ?></p>
-        <?php endif; ?>
+
+        <?php
+        echo paginate_links(array(
+            'base' => add_query_arg('paged', '%#%'),
+            'format' => '',
+            'prev_text' => __('&laquo;'),
+            'next_text' => __('&raquo;'),
+            'total' => $total_pages,
+            'current' => $paged
+        ));
+        ?>
     </div>
 
-    <style>
-    .card {
-        background: #fff;
-        border: 1px solid #c3c4c7;
-        border-radius: 4px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 1px 1px rgba(0, 0, 0, .04);
-    }
-
-    .card h2 {
-        margin-top: 0;
-        padding-bottom: 12px;
-        border-bottom: 1px solid #c3c4c7;
-    }
-    </style>
 </div>

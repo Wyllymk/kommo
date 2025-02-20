@@ -32,16 +32,29 @@ $exclude = [
     'dist'
 ];
 
-// Create build and dist directories
-@mkdir($build_dir, 0755, true);
-@mkdir(__DIR__ . '/dist', 0755, true);
+// Create build and dist directories if they don't exist
+if (!file_exists($build_dir)) {
+    mkdir($build_dir, 0755, true);
+}
+if (!file_exists(__DIR__ . '/dist')) {
+    mkdir(__DIR__ . '/dist', 0755, true);
+}
 
 // Clean up previous build
 if (file_exists($build_dir)) {
+    error_log("Cleaning up previous build...\n");
     recursiveRemove($build_dir);
+    mkdir($build_dir, 0755, true);
+}
+
+// Remove previous zip if it exists
+if (file_exists($zip_file)) {
+    error_log("Removing previous zip file...\n");
+    unlink($zip_file);
 }
 
 // Copy files to build directory
+error_log("Copying files to build directory...\n");
 recursiveCopy($source_dir, $build_dir, $exclude);
 
 // Run composer install --no-dev for production dependencies only
@@ -49,9 +62,10 @@ error_log("Installing production dependencies...\n");
 shell_exec('cd ' . escapeshellarg($build_dir) . ' && composer install --no-dev --optimize-autoloader');
 
 // Create zip file
+error_log("Creating zip file...\n");
 createZip($build_dir, $zip_file);
 
-error_log("Build completed! Production zip created at: $zip_file\n");
+error_log("Build completeded! Production zip created at: $zip_file\n");
 
 // Helper Functions
 function recursiveCopy($src, $dst, $exclude) {
@@ -79,6 +93,10 @@ function recursiveCopy($src, $dst, $exclude) {
 }
 
 function recursiveRemove($dir) {
+    if (!file_exists($dir)) {
+        return true;
+    }
+    
     $files = array_diff(scandir($dir), ['.', '..']);
     foreach ($files as $file) {
         $path = $dir . '/' . $file;
@@ -102,7 +120,7 @@ function createZip($source, $destination) {
     }
     
     $zip = new ZipArchive();
-    if ($zip->open($destination, ZipArchive::CREATE) === TRUE) {
+    if ($zip->open($destination, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
         $source = str_replace('\\', '/', realpath($source));
         
         if (is_dir($source)) {
