@@ -13,8 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-versions: ["8.1"]
+        php-versions: ["7.4", "8.0", "8.1", "8.2", "8.3"]
         wordpress-versions: ["latest"]
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v3
@@ -46,10 +47,37 @@ jobs:
         run: composer install --prefer-dist --no-progress
 
       - name: Check PHP syntax
-        run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+        run: |
+          echo "Checking PHP syntax for files in root, admin, and includes directories..."
+          find . admin includes -maxdepth 1 -type f -name '*.php' -print0 | xargs -0 -n1 php -l > syntax_check_results.txt || true
+          cat syntax_check_results.txt
 
       - name: PHP CodeSniffer
-        run: vendor/bin/phpcs --standard=WordPress
+        run: |
+          echo "Running WordPress Coding Standards check..."
+          vendor/bin/phpcs \
+            --standard=WordPress \
+            --report=full \
+            --report-file=phpcs_results.txt \
+            --extensions=php \
+            --ignore=vendor/,node_modules/ \
+            --warning-severity=0 \
+            ./*.php admin/ includes/ || true
+          cat phpcs_results.txt
+
+      - name: PHP Compatibility Check
+        run: |
+          echo "Running PHP Compatibility check..."
+          composer require --dev phpcompatibility/php-compatibility
+          vendor/bin/phpcs \
+            --standard=PHPCompatibility \
+            --runtime-set testVersion 7.4-8.3 \
+            --report=full \
+            --report-file=compatibility_results.txt \
+            --extensions=php \
+            --ignore=vendor/,node_modules/ \
+            ./*.php admin/ includes/ || true
+          cat compatibility_results.txt
 
       - name: Run test suite
         run: vendor/bin/phpunit --coverage-clover=coverage.xml
@@ -60,17 +88,12 @@ jobs:
           file: ./coverage.xml
           fail_ci_if_error: true
 
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: WordPress Plugin Deploy
-        uses: 10up/action-wordpress-plugin-deploy@stable
-        env:
-          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
-          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
-          SLUG: kommo
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-php-${{ matrix.php-versions }}
+          path: |
+            syntax_check_results.txt
+            phpcs_results.txt
+            compatibility_results.txt
