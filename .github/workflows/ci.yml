@@ -46,8 +46,9 @@ jobs:
       - name: Install dependencies
         run: |
           composer install --prefer-dist --no-progress
-          # Make sure phpcs is executable
+          # Make sure phpcs and phpunit are executable
           chmod +x ./vendor/bin/phpcs
+          chmod +x ./vendor/bin/phpunit
 
       - name: Check PHP syntax
         run: |
@@ -90,7 +91,10 @@ jobs:
           cat compatibility_results.txt
 
       - name: Run test suite
-        run: vendor/bin/phpunit --coverage-clover=coverage.xml
+        run: |
+          # Ensure PHPUnit is executable
+          chmod +x ./vendor/bin/phpunit
+          ./vendor/bin/phpunit --coverage-clover=coverage.xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
