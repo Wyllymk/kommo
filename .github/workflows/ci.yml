@@ -43,7 +43,7 @@ jobs:
             ${{ runner.os }}-php-
 
       - name: Install dependencies
-        run: composer install --prefer-dist --no-progress --with-all-dependencies
+        run: composer install --prefer-dist --no-progress
 
       - name: Check PHP syntax
         run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
