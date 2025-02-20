@@ -90,11 +90,26 @@ jobs:
             ./*.php admin/ includes/ || true
           cat compatibility_results.txt
 
+      - name: Set up WordPress test environment
+        run: |
+          # Create MySQL database
+          export MYSQL_PWD=root
+          mysql -u root -e 'CREATE DATABASE IF NOT EXISTS wordpress_test;'
+
+          # Download and configure WordPress tests
+          bash bin/install-wp-tests.sh wordpress_test root root localhost ${{ matrix.wordpress-versions }}
+        env:
+          MYSQL_PWD: root
+
       - name: Run test suite
         run: |
           # Ensure PHPUnit is executable
           chmod +x ./vendor/bin/phpunit
           ./vendor/bin/phpunit --coverage-clover=coverage.xml
+        env:
+          # Add environment variables needed for WordPress tests
+          WP_TESTS_DIR: /tmp/wordpress-tests-lib
+          WP_CORE_DIR: /tmp/wordpress/
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
