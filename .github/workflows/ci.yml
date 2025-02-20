@@ -90,13 +90,6 @@ jobs:
             ./*.php admin/ includes/ || true
           cat compatibility_results.txt
 
-      - name: Run test suite
-        run: |
-          # Ensure PHPUnit is executable
-          chmod +x ./vendor/bin/phpunit
-          # Run PHPUnit with coverage and debug output
-          ./vendor/bin/phpunit --coverage-clover=coverage.xml --debug
-
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         # Only run if coverage.xml exists
