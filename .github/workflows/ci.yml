@@ -90,14 +90,6 @@ jobs:
             ./*.php admin/ includes/ || true
           cat compatibility_results.txt
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        # Only run if coverage.xml exists
-        if: hashFiles('coverage.xml') != ''
-        with:
-          file: ./coverage.xml
-          fail_ci_if_error: false # Changed to false to prevent CI failure
-
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
