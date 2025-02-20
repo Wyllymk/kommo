@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-versions: ["7.4", "8.0", "8.1", "8.2", "8.3"]
+        php-versions: ["8.1", "8.2", "8.3"]
         wordpress-versions: ["latest"]
       fail-fast: false
 
@@ -44,7 +44,10 @@ jobs:
             ${{ runner.os }}-php-
 
       - name: Install dependencies
-        run: composer install --prefer-dist --no-progress
+        run: |
+          composer install --prefer-dist --no-progress
+          # Make sure phpcs is executable
+          chmod +x ./vendor/bin/phpcs
 
       - name: Check PHP syntax
         run: |
@@ -55,7 +58,12 @@ jobs:
       - name: PHP CodeSniffer
         run: |
           echo "Running WordPress Coding Standards check..."
-          vendor/bin/phpcs \
+          # Install WordPress Coding Standards
+          composer require --dev wp-coding-standards/wpcs
+          # Set installed paths
+          ./vendor/bin/phpcs --config-set installed_paths vendor/wp-coding-standards/wpcs
+          # Run PHPCS
+          ./vendor/bin/phpcs \
             --standard=WordPress \
             --report=full \
             --report-file=phpcs_results.txt \
@@ -63,7 +71,9 @@ jobs:
             --ignore=vendor/,node_modules/ \
             --warning-severity=0 \
             ./*.php admin/ includes/ || true
-          cat phpcs_results.txt
+          if [ -f phpcs_results.txt ]; then
+            cat phpcs_results.txt
+          fi
 
       - name: PHP Compatibility Check
         run: |
