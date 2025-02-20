@@ -45,13 +45,13 @@ if (file_exists($build_dir)) {
 recursiveCopy($source_dir, $build_dir, $exclude);
 
 // Run composer install --no-dev for production dependencies only
-echo "Installing production dependencies...\n";
+error_log("Installing production dependencies...\n");
 shell_exec('cd ' . escapeshellarg($build_dir) . ' && composer install --no-dev --optimize-autoloader');
 
 // Create zip file
 createZip($build_dir, $zip_file);
 
-echo "Build completed! Production zip created at: $zip_file\n";
+error_log("Build completed! Production zip created at: $zip_file\n");
 
 // Helper Functions
 function recursiveCopy($src, $dst, $exclude) {
